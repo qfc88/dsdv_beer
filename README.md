@@ -3,3 +3,5 @@ Our project researched and visualized how country and associated data of beer co
 
 A joint project between Do Hieu, Tran Khang, Quang Phuoc, and Thanh Phuong.
 
+# Data
+## Crawling/Analysis
