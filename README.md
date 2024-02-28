@@ -10,4 +10,16 @@ Dataset is collected average annual per capita beer consumption, measured in lit
 ### Indicator
 Alcohol, recorded per capita (15+) consumption (in litres of pure alcohol) - Beverage Types:Beer
 
-Attention: This data is not intended to be a full set, and we may have some errors that leads to 
+**Attention: This data is not intended to be a full set, and we may have some errors that leads to unexpected result.**
+
+## Objective
+
+The primary objective of this project is to investigate the drivers behind the increasing consumption of beer and propose evidence-based interventions to reverse or mitigate this trend. By addressing this key question, the project aims to contribute to the promotion of responsible drinking behavior and the improvement of public health outcomes.
+
+## Data collection
+
+Data for this project will be sourced from various reputable sources, including Kaggle, governmental health agencies, market research firms, academic studies, and industry reports.
+The selection of datasets will be guided by criteria such as relevance, accuracy, and reliability. Only datasets from reputable sources with clear documentation and adequate coverage will be considered for inclusion in the analysis. 
+
+
+
