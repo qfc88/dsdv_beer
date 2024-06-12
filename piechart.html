@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Alcohol Concentration Pie Chart</title>
+    <h2 style="font-family: sans-serif;"><b>Beer Consumption of ASEAN from 1961-2019</b></h2>
+    <h3 style="color: rgb(54, 65, 77)" ><em>Average annual per capita beer consumption, measured in liters of pure alcohol.</em></h3>
+    <script src="https://d3js.org/d3.v6.min.js"></script>
+    <style>
+        #legend-container {
+            width: 200px;
+            margin-left: 200px;
+            margin-top: 150px;
+            padding: 100px;
+            border-radius: 20px;
+            font-family: Arial, sans-serif; /* Change font family */
+        }
+
+        #legend-container svg {
+            overflow: visible;
+        }
+
+        .legend-text {
+            font-size: 14px;
+            font-weight: bold; /* Make country names bold */
+        }
+
+        .color-note {
+            font-size: 12px; /* Decrease font size for color note */
+            margin-top: 5px; /* Add margin to separate color note from country name */
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .legend-item rect {
+            margin-right: 5px;
+        }
+
+        .slice:hover {
+            opacity: 0.8;
+        }
+
+        .tooltip {
+            position: absolute;
+            display: none;
+            background: white;
+            border: 1px solid black;
+            padding: 5px;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div id="chart-container" style="display: flex;">
+        <div id="pie-chart"></div>
+        <div id="legend-container"></div>
+    </div>
+    <div class="tooltip"></div>
+    <script>
+        // URL of the CSV file
+        const csvUrl = "https://raw.githubusercontent.com/qfc88/dsdv_beer/main/CSV%20file/BeerConsumption_Cleaned_Main.csv?fbclid=IwZXh0bgNhZW0CMTAAAR0VqGPwdu6KglcycYx52eesdluVnkZ0EDy0h0z2Uvmc3qG17XretEuEpFI_aem_AasbLa-m1MlehixrMLpMjkfoqc6dfC7ZzfL0xptfSRgNF0C0dXsgXgweN1EKhwydanpNz4kqYDGQee2exCqbZREp";
+
+        // Load the CSV data
+        d3.csv(csvUrl).then(data => {
+            // Summarize the data by country
+            const countrySums = data.reduce((acc, curr) => {
+                const country = curr.Entity;
+                const indicator = parseFloat(curr.Indicator);
+
+                if (!isNaN(indicator)) {
+                    if (acc[country]) {
+                        acc[country] += indicator;
+                    } else {
+                        acc[country] = indicator;
+                    }
+                }
+                return acc;
+            }, {});
+
+            const pieData = Object.keys(countrySums).map(country => {
+                return {country: country, value: countrySums[country]};
+            });
+
+            const width = 900;
+            const height = 950;
+            const margin = 50;
+
+            const radius = Math.min(width, height) / 2.2 - margin;
+
+            const svg = d3.select("#pie-chart")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height)
+                .append("g")
+                .attr("transform", `translate(${width / 1.8}, ${height / 2.2})`);
+
+            const color = d3.scaleOrdinal()
+                .domain(pieData.map(d => d.country))
+                .range(d3.schemeCategory10);
+
+            const pie = d3.pie()
+                .value(d => d.value);
+
+            const data_ready = pie(pieData);
+
+            const arc = d3.arc()
+                .innerRadius(0)
+                .outerRadius(radius);
+
+            svg
+                .selectAll('slices')
+                .data(data_ready)
+                .enter()
+                .append('path')
+                .attr('d', arc)
+                .attr('fill', d => color(d.data.country))
+                .attr("stroke", "black")
+                .style("stroke-width", "2px")
+                .style("opacity", 0.7)
+                .attr("class", "slice")
+                .append("title")
+                .text(d => `${d.data.country}: ${d.data.value.toFixed(2)}`);
+
+            // Calculate the total sum of indicators
+            const totalSum = pieData.reduce((acc, curr) => acc + curr.value, 0);
+
+            // Append the total sum text to the pie chart
+            svg.append("text")
+                .attr("x", 0)
+                .attr("y", radius + 30)
+                .attr("text-anchor", "middle")
+                .style("font-size", "20px")
+                .style("font-family", "Arial, sans-serif")
+                .style("font-weight", "bold")
+                .text(`Total Indicator: ${totalSum.toFixed(2)}`);
+
+            // Create legend
+            const legend = d3.select("#legend-container")
+                .append("svg")
+                .attr("width", 200)
+                .attr("height", pieData.length * 20);
+
+            const legendItems = legend.selectAll(".legend-item")
+                .data(pieData)
+                .enter()
+                .append("g")
+                .attr("class", "legend-item")
+                .attr("transform", (d, i) => `translate(0, ${i * 50})`);
+
+            legendItems.append("rect")
+                .attr("width", 10)
+                .attr("height", 10)
+                .attr("fill", d => color(d.country));
+
+            legendItems.append("text")
+                .attr("class", "legend-text") // Added class for styling
+                .attr("x", 20)
+                .attr("y", 5)
+                .text(d => `${d.country}:  ${d.value.toFixed(2)}`)
+                .attr("alignment-baseline", "middle");
+
+            // Add color note
+            legend.append("text")
+                .attr("class", "color-note") // Added class for styling
+                .attr("x", 20)
+                .attr("y", pieData.length * 20 + 20); // Adjust position
+                
+            // Tooltip
+            const tooltip = d3.select("body").append("div")
+                .attr("class", "tooltip")
+                .style("position", "absolute")
+                .style("z-index", "10")
+                .style("visibility", "hidden");
+
+            svg.selectAll(".slice")
+                .on("mouseover", function(event, d) {
+                    d3.select(this)
+                        .style("opacity", 1);
+                    tooltip.text(`${d.data.country}: ${d.data.value.toFixed(2)}`)
+                        .style("visibility", "visible");
+                })
+                .on("mousemove", function(event) {
+                    tooltip.style("top", (event.pageY - 10) + "px")
+                        .style("left", (event.pageX + 10) + "px");
+                })
+                .on("mouseout", function() {
+                    d3.select(this)
+                        .style("opacity", 0.7);
+                    tooltip.style("visibility", "hidden");
+                });
+
+        }).catch(error => {
+            console.error("Error loading or parsing data:", error);
+        });
+    
+    </script>
+</body>
+</html>

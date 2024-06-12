@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<!-- Load d3.js -->
+<script src="https://d3js.org/d3.v6.js"></script>
+<h2 style="font-family: sans-serif;"><b>Beer Consumption per person of ASEAN from 1961-2019</b></h2>
+<h3 style="color: rgb(54, 65, 77)" ><em>Average annual per capita beer consumption, measured in liters of pure alcohol.</em></h3>
+<!-- Initialize a select button -->
+<select id="selectButton"></select>
+
+<!-- Create a div where the graph will take place -->
+<div id="my_dataviz"></div>
+
+<script>
+
+// set the dimensions and margins of the graph
+const margin = {top: 10, right: 30, bottom: 70, left: 60},  // Increased left margin to move the chart to the right
+    width = 1000 - margin.left - margin.right,  // Increased width
+    height = 800 - margin.top - margin.bottom;
+
+// append the svg object to the body of the page
+const svg = d3.select("#my_dataviz")
+  .append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+  .append("g")
+    .attr("transform", `translate(${margin.left}, ${margin.top})`);
+
+// Add a tooltip div. Initially hidden.
+const tooltip = d3.select("#my_dataviz")
+  .append("div")
+    .style("opacity", 0)
+    .style("position", "absolute")
+    .style("background-color", "white")
+    .style("border", "solid")
+    .style("border-width", "1px")
+    .style("border-radius", "5px")
+    .style("padding", "5px");
+
+// Read the data
+d3.csv("https://raw.githubusercontent.com/qfc88/dsdv_beer/main/CSV%20file/BeerConsumption_Cleaned_Main.csv?fbclid=IwZXh0bgNhZW0CMTAAAR0VqGPwdu6KglcycYx52eesdluVnkZ0EDy0h0z2Uvmc3qG17XretEuEpFI_aem_AasbLa-m1MlehixrMLpMjkfoqc6dfC7ZzfL0xptfSRgNF0C0dXsgXgweN1EKhwydanpNz4kqYDGQee2exCqbZREp").then(function(data) {
+    // Parse the date / time
+    const parseDate = d3.timeParse("%Y");
+
+    // Convert data types
+    data.forEach(function(d) {
+        d.Year = parseDate(d.Year);
+        d.Indicator = +d.Indicator;
+    });
+
+    // List of groups (entities)
+    const allGroup = [...new Set(data.map(d => d.Entity))];
+
+    // Add the options to the button
+    d3.select("#selectButton")
+      .selectAll('option')
+      .data(allGroup)
+      .enter()
+      .append('option')
+      .text(d => d) // Text showed in the menu
+      .attr("value", d => d); // Corresponding value returned by the button
+
+    // A color scale: one color for each group
+    const myColor = d3.scaleOrdinal()
+      .domain(allGroup)
+      .range(d3.schemeSet2);
+
+    // Add X axis
+    const x = d3.scaleTime()
+      .domain(d3.extent(data, d => d.Year))
+      .range([0, width]);
+    svg.append("g")
+      .attr("transform", `translate(0, ${height})`)
+      .call(d3.axisBottom(x).ticks(10))
+      .selectAll("text")
+        .style("font-weight", "bold"); // Make x-axis labels bold
+
+    // Add Y axis
+    const y = d3.scaleLinear()
+      .domain([0.1, 100])
+      .range([height, 0]);
+    svg.append("g")
+      .call(d3.axisLeft(y))
+      .selectAll("text")
+      .style("font-weight", "bold"); // Make y-axis labels bold
+      
+
+    // Initialize line with first group of the list
+    const line = svg
+      .append('g')
+      .append("path")
+        .datum(data.filter(d => d.Entity === allGroup[0]))
+        .attr("d", d3.line()
+          .x(d => x(d.Year))
+          .y(d => y(d.Indicator))
+        )
+        .attr("stroke", myColor(allGroup[0]))
+        .style("stroke-width", 4)
+        .style("fill", "none");
+
+     // Add Year label   
+     svg.append("text")
+    .attr("transform", "translate(" + width / 2 + "," + (height + margin.bottom / 2) + ")")
+    .style("text-anchor", "middle")
+    .style("font-size", "20px")
+    .style("fill", "red")
+    .style("font-family", "sans-serif")
+    .style("font-weight", "bold")  // Add this line to make the text bold
+    .attr("dy", "1em")
+    .text("Year");
+
+    // Add Y axis label
+    svg.append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("y", 0 - margin.left)
+      .attr("x", 0 - (height / 2))
+      .attr("dy", "1em")
+      .style("text-anchor", "middle")
+      .style("font-size", "20px")
+      .style("fill", "red")
+      .style("font-family", "sans-serif")
+      .style("font-weight", "bold")
+      .text("Indicator");
+
+   
+
+    // Add a dot for hover interaction
+    const dot = svg
+      .append('circle')
+        .style("fill", "none")
+        .attr("stroke", "black")
+        .attr('r', 4)
+        .style("opacity", 0);
+
+    // A function that updates the chart
+    function update(selectedGroup) {
+      // Filter data with the selection
+      const dataFilter = data.filter(d => d.Entity === selectedGroup);
+
+      // Update Y axis domain with the selected group's data
+      y.domain([0, d3.max(dataFilter, d => +d.Indicator)]);
+      svg.select("g.y.axis")
+        .transition()
+        .duration(1000)
+        .call(d3.axisLeft(y))
+        .selectAll("text")
+          .style("font-weight", "bold"); // Ensure y-axis labels stay bold after update
+
+      // Update line with new data
+      line
+          .datum(dataFilter)
+          .transition()
+          .duration(1000)
+          .attr("d", d3.line()
+            .x(d => x(d.Year))
+            .y(d => y(d.Indicator))
+          )
+          .attr("stroke", myColor(selectedGroup));
+
+      // Mousemove function
+      svg.on('mousemove', (event) => {
+        const mouse = d3.pointer(event);
+        const x0 = x.invert(mouse[0]);
+        const bisect = d3.bisector(d => d.Year).left;
+        const idx = bisect(dataFilter, x0, 1);
+        const selectedData = dataFilter[idx - 1];
+        dot
+          .attr("cx", x(selectedData.Year))
+          .attr("cy", y(selectedData.Indicator))
+          .style("opacity", 1);
+        tooltip
+          .html(`Year: ${selectedData.Year.getFullYear()}<br>Indicator: ${selectedData.Indicator}`)
+          .style("left", (event.pageX + 15) + "px")
+          .style("top", (event.pageY - 28) + "px")
+          .style("opacity", 1);
+      });
+
+      // Mouseout function
+      svg.on('mouseout', () => {
+        dot.style("opacity", 0);
+        tooltip.style("opacity", 0);
+      });
+    }
+
+    // When the button is changed, run the updateChart function
+    d3.select("#selectButton").on("change", function(event) {
+        // Recover the option that has been chosen
+        const selectedOption = d3.select(this).property("value");
+        // Run the updateChart function with this selected option
+        update(selectedOption);
+    });
+
+    // Initial update to set up interaction for the initial selection
+    update(allGroup[0]);
+});
+
+</script>
